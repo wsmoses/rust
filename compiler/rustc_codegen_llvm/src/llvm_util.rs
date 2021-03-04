@@ -10,6 +10,8 @@ use rustc_span::symbol::Symbol;
 use rustc_target::spec::{MergeFunctions, PanicStrategy};
 use std::ffi::{CStr, CString};
 
+use libc;
+
 use std::slice;
 use std::str;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -113,6 +115,16 @@ unsafe fn configure_llvm(sess: &Session) {
     }
 
     llvm::LLVMInitializePasses();
+    
+    for plugin in &sess.opts.cg.llvm_plugins {
+        let path = CString::new(plugin.as_bytes()).unwrap();
+        let res = libc::dlopen(path.as_ptr(), libc::RTLD_LAZY | libc::RTLD_GLOBAL);
+        if res.is_null() {
+            println!("{}", CStr::from_ptr(libc::dlerror()).to_string_lossy().into_owned());
+        }
+        println!("{:p}", res);
+        println!("{}", plugin);
+    }
 
     rustc_llvm::initialize_available_targets();
 
